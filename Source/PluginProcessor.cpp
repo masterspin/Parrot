@@ -95,6 +95,18 @@ void ParrotAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+
+    juce::dsp::ProcessSpec spec;
+
+    spec.maximumBlockSize = samplesPerBlock;
+
+    spec.numChannels = 1;
+
+    spec.sampleRate = sampleRate;
+
+    leftChain.prepare(spec);
+    rightChain.prepare(spec);
+
 }
 
 void ParrotAudioProcessor::releaseResources()
@@ -134,6 +146,9 @@ void ParrotAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
+    
+    std::cout << (totalNumInputChannels) << std::endl;
+    std::cout << (totalNumOutputChannels) << std::endl;;
 
     // In case we have more outputs than inputs, this code clears any output
     // channels that didn't contain input data, (because these aren't
@@ -144,18 +159,38 @@ void ParrotAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
+    
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
     // Make sure to reset the state if your inner loop is processing
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
+//    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+//    {
+//        auto* channelData = buffer.getWritePointer (channel);
+//        //..do something to the data...
+//    }
 
-        // ..do something to the data...
+    juce::dsp::AudioBlock<float> block(buffer);
+
+    if (block.getNumChannels() >= 2) // Ensure buffer has at least two channels
+    {
+        auto leftBlock = block.getSingleChannelBlock(0);
+        auto rightBlock = block.getSingleChannelBlock(1);
+
+        juce::dsp::ProcessContextReplacing<float> leftContext(leftBlock);
+        juce::dsp::ProcessContextReplacing<float> rightContext(rightBlock);
+
+        leftChain.process(leftContext);
+        rightChain.process(rightContext);
     }
+    else
+    {
+        // Handle error: buffer does not have enough channels
+        jassertfalse;
+    }
+    
 }
 
 //==============================================================================
@@ -187,27 +222,27 @@ void ParrotAudioProcessor::setStateInformation (const void* data, int sizeInByte
 juce::AudioProcessorValueTreeState::ParameterLayout ParrotAudioProcessor::createParameterLayout(){
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
     
-    layout.add(std::make_unique<juce::AudioParameterFloat>( "LowCut Freq", 
+    layout.add(std::make_unique<juce::AudioParameterFloat>( "LowCut Freq",
                                                             "LowCut Freq",
-                                                            juce::NormalisableRange<float>(20.f, 2000.f, 1.f, 1.f),
+                                                            juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f),
                                                             20.f));
                                     
-    layout.add(std::make_unique<juce::AudioParameterFloat>("HighCut Freq", 
+    layout.add(std::make_unique<juce::AudioParameterFloat>("HighCut Freq",
                                                             "HighCut Freq",
-                                                            juce::NormalisableRange<float>(20.f, 2000.f, 1.f, 1.f),
+                                                            juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f),
                                                             20000.f));
 
-    layout.add(std::make_unique<juce::AudioParameterFloat>("Peak Freq", 
+    layout.add(std::make_unique<juce::AudioParameterFloat>("Peak Freq",
                                                             "Peak Freq",
-                                                            juce::NormalisableRange<float>(20.f, 2000.f, 1.f, 1.f),
+                                                            juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f),
                                                             750.f));
 
-    layout.add(std::make_unique<juce::AudioParameterFloat>("Peak Gain", 
+    layout.add(std::make_unique<juce::AudioParameterFloat>("Peak Gain",
                                                             "Peak Gain",
                                                             juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
                                                             0.0f));
 
-    layout.add(std::make_unique<juce::AudioParameterFloat>("Peak Quality", 
+    layout.add(std::make_unique<juce::AudioParameterFloat>("Peak Quality",
                                                             "Peak Quality",
                                                             juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 1.f),
                                                             1.f));
