@@ -104,6 +104,20 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState &apvts){
     return settings;
 }
 
+void ParrotAudioProcessor::updatePeakFilter(const ChainSettings &chainSettings){
+    auto peakCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(),
+                                                                                chainSettings.peakFreq,
+                                                                                chainSettings.peakQuality,
+                                                                                juce::Decibels::decibelsToGain(chainSettings.peakGainInDecibels));
+    
+    updateCoefficients(leftChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
+    updateCoefficients(rightChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
+}
+
+void ParrotAudioProcessor::updateCoefficients(Coefficients &old, Coefficients &replacements){
+    *old = *replacements;
+}
+
 //==============================================================================
 void ParrotAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
@@ -123,12 +137,7 @@ void ParrotAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock
     
     auto chainSettings = getChainSettings(apvts);
     
-    auto peakCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate,
-                                                                                chainSettings.peakFreq,
-                                                                                chainSettings.peakQuality,
-                                                                                juce::Decibels::decibelsToGain(chainSettings.peakGainInDecibels));
-    leftChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
-    rightChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
+    updatePeakFilter(chainSettings);
     
     auto cutCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq,
                                                                                                        sampleRate,
@@ -271,12 +280,7 @@ void ParrotAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce:
     
     auto chainSettings = getChainSettings(apvts);
     
-    auto peakCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(),
-                                                                                chainSettings.peakFreq,
-                                                                                chainSettings.peakQuality,
-                                                                                juce::Decibels::decibelsToGain(chainSettings.peakGainInDecibels));
-    leftChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
-    rightChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
+    updatePeakFilter(chainSettings);
     
     auto cutCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq,
                                                                                                        getSampleRate(),
