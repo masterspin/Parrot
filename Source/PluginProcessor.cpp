@@ -128,9 +128,7 @@ void /*ParrotAudioProcessor::*/updateCoefficients(Coefficients &old, const Coeff
 }
 
 void ParrotAudioProcessor::updateLowCutFilters(const ChainSettings &chainSettings){
-    auto lowCutCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq,
-                                                                                                               getSampleRate(),
-                                                                                                               (chainSettings.lowCutSlope+1) * 2);
+    auto lowCutCoefficients = makeLowCutFilter(chainSettings, getSampleRate());
     auto& leftLowCut = leftChain.get<ChainPositions::LowCut>();
     auto& rightLowCut = rightChain.get<ChainPositions::LowCut>();
     
@@ -139,9 +137,7 @@ void ParrotAudioProcessor::updateLowCutFilters(const ChainSettings &chainSetting
 }
 
 void ParrotAudioProcessor::updateHighCutFilters(const ChainSettings &chainSettings){
-    auto highCutCoefficients = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainSettings.highCutFreq,
-                                                                                                       getSampleRate(),
-                                                                                                       (chainSettings.highCutSlope+1) * 2);
+    auto highCutCoefficients = makeHighCutFilter(chainSettings, getSampleRate());
     auto& leftHighCut = leftChain.get<ChainPositions::HighCut>();
     auto& rightHighCut = rightChain.get<ChainPositions::HighCut>();
     

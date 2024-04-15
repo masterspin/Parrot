@@ -27,11 +27,23 @@ highCutSlopeSliderAttachment(audioProcessor.apvts, "HighCut Slope", highCutSlope
         addAndMakeVisible(comp);
     }
     
-    setSize (600, 400);
+    const auto& params = audioProcessor.getParameters();
+    
+    for(auto param : params){
+        param->addListener(this);
+    }
+    
+    startTimerHz(60);
+    
+    setSize (600, 450);
 }
 
 ParrotAudioProcessorEditor::~ParrotAudioProcessorEditor()
 {
+    const auto& params = audioProcessor.getParameters();
+    for(auto param : params){
+        param->removeListener(this);
+    }
 }
 
 //==============================================================================
@@ -110,7 +122,7 @@ void ParrotAudioProcessorEditor::paint (juce::Graphics& g)
         responseCurve.lineTo(responseArea.getX() + i, map(mags[i]));
     }
     
-    g.setColour(Colours::purple);
+    g.setColour(Colours::white);
     g.drawRoundedRectangle(responseArea.toFloat(), 4.f, 1.f);
     
     g.setColour(Colours::white);
@@ -144,7 +156,9 @@ void ParrotAudioProcessorEditor::parameterValueChanged(int parameterIndex, float
 
 void ParrotAudioProcessorEditor::timerCallback(){
     if(parametersChanged.compareAndSetBool(false,true)){
-        
+        auto chainSettings = getChainSettings(audioProcessor.apvts);
+        auto peakCoefficients = makePeakFilter(chainSettings, audioProcessor.getSampleRate());
+        updateCoefficients(monoChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
     }
 }
 
