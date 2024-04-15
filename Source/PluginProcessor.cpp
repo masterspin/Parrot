@@ -114,7 +114,7 @@ void ParrotAudioProcessor::updatePeakFilter(const ChainSettings &chainSettings){
     updateCoefficients(rightChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
 }
 
-void ParrotAudioProcessor::updateCoefficients(Coefficients &old, Coefficients &replacements){
+void ParrotAudioProcessor::updateCoefficients(Coefficients &old, const Coefficients &replacements){
     *old = *replacements;
 }
 
